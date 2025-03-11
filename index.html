@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShibPixel - Shibarium</title>
     <!-- Favicon with multiple sizes for better compatibility -->
-    <link rel="icon" type="image/png" href="images/shibarium.png" sizes="16x16">
-    <link rel="icon" type="image/png" href="images/shibarium.png" sizes="32x32">
+    <link rel="icon" type="images/shibarium.png" href="images/shibarium.png" sizes="16x16">
+    <link rel="icon" type="images/shibarium.png" href="images/shibarium.png" sizes="32x32">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/shibarium.png">
     <link rel="shortcut icon" href="/images/shibarium.png">
     <style>
@@ -29,9 +29,12 @@
         .color-block { width: 40px; height: 40px; border: 2px solid #ccc; cursor: pointer; transition: border 0.3s; }
         .color-block:hover { border-color: #000; }
         .color-block.selected { border: 3px solid #000; }
-        .paint-btn { padding: 10px 20px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; transition: background 0.3s; }
+        .paint-btn, .download-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; transition: background 0.3s; }
+        .paint-btn { background: #28a745; color: #fff; }
         .paint-btn:hover { background: #218838; }
-        .paint-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        .download-btn { background: #6c757d; color: #fff; margin-left: 10px; }
+        .download-btn:hover { background: #5a6268; }
+        .paint-btn:disabled, .download-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
         .coords { font-size: 1em; color: #666; font-weight: bold; }
         .hint { font-size: 0.9em; color: #666; margin-top: 5px; }
         .quote-section { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 10px; font-style: italic; color: #666; font-size: 1em; }
@@ -41,10 +44,12 @@
             .status { font-size: 0.8em; }
             #canvas { width: 100%; height: auto; min-height: 300px; }
             .color-block { width: 30px; height: 30px; }
-            .paint-btn { padding: 8px 15px; font-size: 0.9em; }
+            .paint-btn, .download-btn { padding: 8px 15px; font-size: 0.9em; }
             .coords { font-size: 0.8em; }
             .hint { font-size: 0.75em; }
             .quote-section { font-size: 0.85em; padding: 10px; }
+            .controls { flex-direction: column; gap: 10px; }
+            .download-btn { margin-left: 0; margin-top: 10px; }
         }
     </style>
 </head>
@@ -67,6 +72,7 @@
             </div>
             <div class="controls">
                 <button class="paint-btn" id="paintButton" disabled>Paint</button>
+                <button class="download-btn" id="downloadButton" disabled>Download PNG</button>
                 <div class="coords" id="coords">X: 0, Y: 0</div>
             </div>
             <div class="color-grid" id="colorGrid"></div>
@@ -106,6 +112,7 @@
         let selectedX = 0, selectedY = 0, selectedColor = 0, pixelSize = 5;
         const quoteSection = document.getElementById('quoteSection');
         const colorGrid = document.getElementById('colorGrid');
+        const downloadButton = document.getElementById('downloadButton');
 
         function updateQuote(message) {
             const quotes = [
@@ -120,6 +127,26 @@
 
         function updateLoadingProgress(progress) {
             loadingProgress.style.width = `${progress}%`;
+        }
+
+        function downloadCanvas() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 1000;
+            tempCanvas.height = 1000;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Scale the original canvas content to 1000x1000
+            tempCtx.scale(2, 2); // Since original is 500x500, scale by 2 to fit 1000x1000
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = `ShibPixel_Artwork_${new Date().toISOString().slice(0, 10)}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            updateQuote("Woof! Your masterpiece is downloaded - Share it with the pack! 🐶");
         }
 
         async function connectWallet() {
@@ -148,6 +175,7 @@
                 updateQuote("Wallet connected! Let’s paint the town red... or any color! 🎉");
                 document.getElementById('connectSection').style.display = 'none';
                 document.getElementById('paintButton').disabled = false;
+                document.getElementById('downloadButton').disabled = false;
                 contract = new web3.eth.Contract(SHIBPIXEL_ABI, SHIBPIXEL_ADDRESS);
                 await initCanvas();
                 await populateColors();
@@ -256,6 +284,7 @@
                 web3 = null;
                 accounts = null;
                 document.getElementById('paintButton').disabled = true;
+                document.getElementById('downloadButton').disabled = true;
                 updateQuote("Ruff! Wrong network - Shiba’s lost in the blockchain woods! 🌲");
             } else {
                 connectWallet();
@@ -272,6 +301,7 @@
                 web3 = null;
                 accounts = null;
                 document.getElementById('paintButton').disabled = true;
+                document.getElementById('downloadButton').disabled = true;
                 updateQuote("Woof! Wallet disconnected - Shiba’s off to chase some bones! 🐶");
             }
         });
@@ -288,6 +318,7 @@
 
         document.getElementById('connectButton').addEventListener('click', connectWallet);
         document.getElementById('paintButton').addEventListener('click', paintPixel);
+        document.getElementById('downloadButton').addEventListener('click', downloadCanvas);
     </script>
 </body>
 </html>
