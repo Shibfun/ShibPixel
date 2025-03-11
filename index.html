@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="images/shibarium.png">
     <style>
         body { font-family: 'Arial', sans-serif; background: #f5f5f5; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
-        .container { background: #fff; padding: 15px; width: 90%; max-width: 600px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
+        .container { background: #fff; padding: 15px; width: 90%; max-width: 1000px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
         .network { display: flex; align-items: center; font-size: 1em; font-weight: bold; color: #333; }
         .network img { width: 20px; height: 20px; margin-right: 5px; }
@@ -17,9 +17,12 @@
         .connect-btn.loading { opacity: 0.7; pointer-events: none; }
         .status { margin-top: 10px; font-size: 0.9em; color: #666; }
         .canvas-section { margin: 20px 0; }
-        #canvas { display: block; margin: 0 auto; border: 1px solid #ccc; image-rendering: pixelated; width: 500px; height: 500px; }
+        #canvas { display: block; margin: 0 auto; border: 1px solid #ccc; image-rendering: pixelated; width: 1000px; height: 1000px; }
         .controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
-        .color-select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 150px; }
+        .color-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 10px; }
+        .color-block { width: 40px; height: 40px; border: 1px solid #ccc; cursor: pointer; }
+        .color-block:hover { border-color: #000; }
+        .color-block.selected { border: 2px solid #000; }
         .paint-btn { padding: 8px 15px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
         .paint-btn:hover { background: #218838; }
         .paint-btn:disabled { background: #ccc; cursor: not-allowed; }
@@ -28,8 +31,8 @@
             .container { width: 100%; margin: 0; padding: 10px; border-radius: 0; box-shadow: none; }
             .connect-btn { padding: 10px; font-size: 0.9em; }
             .status { font-size: 0.8em; }
-            #canvas { width: 100%; height: auto; }
-            .color-select { width: 120px; padding: 6px; }
+            #canvas { width: 100%; height: auto; min-height: 300px; }
+            .color-block { width: 30px; height: 30px; }
             .paint-btn { padding: 6px 12px; }
             .coords { font-size: 0.8em; }
         }
@@ -48,12 +51,12 @@
             <div id="networkStatus" class="status">Click to connect...</div>
         </div>
         <div class="canvas-section">
-            <canvas id="canvas" width="500" height="500"></canvas>
+            <canvas id="canvas" width="1000" height="1000"></canvas>
             <div class="controls">
-                <select class="color-select" id="colorSelect"></select>
                 <button class="paint-btn" id="paintButton" disabled>Paint</button>
                 <div class="coords" id="coords">X: 0, Y: 0</div>
             </div>
+            <div class="color-grid" id="colorGrid"></div>
         </div>
     </div>
 
@@ -81,7 +84,7 @@
         
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        let selectedX = 0, selectedY = 0, pixelSize = 5;
+        let selectedX = 0, selectedY = 0, selectedColor = 0, pixelSize = 10;
 
         async function connectWallet() {
             const status = document.getElementById('networkStatus');
@@ -136,42 +139,45 @@
                     }
                 }
             }
-            canvas.addEventListener('mousemove', (e) => {
+            canvas.addEventListener('click', (e) => {
                 const rect = canvas.getBoundingClientRect();
                 selectedX = Math.floor((e.clientX - rect.left) / pixelSize);
                 selectedY = Math.floor((e.clientY - rect.top) / pixelSize);
                 document.getElementById('coords').innerText = `X: ${selectedX}, Y: ${selectedY}`;
                 if (selectedX >= 100 || selectedY >= 100) {
-                    document.getElementById('coords').innerText = `X: 0, Y: 0`;
                     selectedX = 0;
                     selectedY = 0;
+                    document.getElementById('coords').innerText = `X: 0, Y: 0`;
                 }
-            });
-            canvas.addEventListener('click', () => {
-                document.getElementById('coords').innerText = `X: ${selectedX}, Y: ${selectedY}`;
             });
         }
 
         async function populateColors() {
-            const select = document.getElementById('colorSelect');
+            const colorGrid = document.getElementById('colorGrid');
             for (let i = 0; i < 40; i++) {
                 const color = await contract.methods.availableColors(i).call();
-                const option = document.createElement('option');
-                option.value = i;
-                option.text = `Color ${i} (RGB: ${color.r}, ${color.g}, ${color.b})`;
-                option.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
-                option.style.color = (color.r * 0.299 + color.g * 0.587 + color.b * 0.114) > 128 ? '#000' : '#fff';
-                select.appendChild(option);
+                const block = document.createElement('div');
+                block.className = 'color-block';
+                block.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                block.dataset.index = i;
+                block.addEventListener('click', () => {
+                    selectedColor = i;
+                    document.querySelectorAll('.color-block').forEach(b => b.classList.remove('selected'));
+                    block.classList.add('selected');
+                });
+                colorGrid.appendChild(block);
             }
+            // Select the first color by default
+            colorGrid.children[0].classList.add('selected');
+            selectedColor = 0;
         }
 
         async function paintPixel() {
-            const colorIndex = document.getElementById('colorSelect').value;
             const paintButton = document.getElementById('paintButton');
             try {
                 paintButton.disabled = true;
-                await contract.methods.paintPixel(selectedX, selectedY, colorIndex).send({ from: accounts[0] });
-                const color = await contract.methods.availableColors(colorIndex).call();
+                await contract.methods.paintPixel(selectedX, selectedY, selectedColor).send({ from: accounts[0] });
+                const color = await contract.methods.availableColors(selectedColor).call();
                 ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
                 ctx.fillRect(selectedX * pixelSize, selectedY * pixelSize, pixelSize, pixelSize);
             } catch (error) {
