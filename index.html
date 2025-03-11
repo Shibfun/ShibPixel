@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShibPixel - Shibarium</title>
+    <link rel="icon" type="image/png" href="images/shibarium.png">
+    <style>
+        body { font-family: 'Arial', sans-serif; background: #f5f5f5; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .container { background: #fff; padding: 15px; width: 90%; max-width: 600px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
+        .network { display: flex; align-items: center; font-size: 1em; font-weight: bold; color: #333; }
+        .network img { width: 20px; height: 20px; margin-right: 5px; }
+        .connect-section { margin: 15px 0; }
+        .connect-btn { background: #007bff; color: #fff; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 1em; width: 100%; box-sizing: border-box; }
+        .connect-btn:hover { background: #0056b3; }
+        .connect-btn.loading { opacity: 0.7; pointer-events: none; }
+        .status { margin-top: 10px; font-size: 0.9em; color: #666; }
+        .canvas-section { margin: 20px 0; }
+        #canvas { display: block; margin: 0 auto; border: 1px solid #ccc; image-rendering: pixelated; width: 100%; max-width: 500px; height: auto; }
+        .controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+        .color-select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 150px; }
+        .paint-btn { padding: 8px 15px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .paint-btn:hover { background: #218838; }
+        .paint-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .coords { font-size: 0.9em; color: #666; }
+        @media (max-width: 600px) {
+            .container { width: 100%; margin: 0; padding: 10px; border-radius: 0; box-shadow: none; }
+            .connect-btn { padding: 10px; font-size: 0.9em; }
+            .status { font-size: 0.8em; }
+            #canvas { max-width: 100%; }
+            .color-select { width: 120px; padding: 6px; }
+            .paint-btn { padding: 6px 12px; }
+            .coords { font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="network">
+                <img src="images/shibarium.png" alt="Shibarium"> Shibarium
+            </div>
+            <div style="width: 24px;"></div>
+        </div>
+        <div class="connect-section" id="connectSection">
+            <button class="connect-btn" id="connectButton">Connect MetaMask</button>
+            <div id="networkStatus" class="status">Click to connect...</div>
+        </div>
+        <div class="canvas-section">
+            <canvas id="canvas" width="100" height="100"></canvas>
+            <div class="controls">
+                <select class="color-select" id="colorSelect"></select>
+                <button class="paint-btn" id="paintButton" disabled>Paint</button>
+                <div class="coords" id="coords">X: 0, Y: 0</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+    <script>
+        let web3, accounts, contract;
+        const SHIBPIXEL_ADDRESS = "0x99d1C2f97185A43bDD5d18F16bA6ff798797d204";
+        const SHIBPIXEL_ABI = [
+            {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
+            {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"painter","type":"address"},{"indexed":false,"internalType":"uint256","name":"x","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"y","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"newColorIndex","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"oldColorIndex","type":"uint8"}],"name":"PixelPainted","type":"event"},
+            {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"availableColors","outputs":[{"internalType":"uint8","name":"r","type":"uint8"},{"internalType":"uint8","name":"g","type":"uint8"},{"internalType":"uint8","name":"b","type":"uint8"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"canvas","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"findRandomAvailablePixel","outputs":[{"internalType":"bool","name":"found","type":"bool"},{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"getAvailableCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"startX","type":"uint256"},{"internalType":"uint256","name":"startY","type":"uint256"},{"internalType":"uint256","name":"width","type":"uint256"},{"internalType":"uint256","name":"height","type":"uint256"}],"name":"getCanvasSection","outputs":[{"internalType":"uint8[][]","name":"","type":"uint8[][]"}],"stateMutability":"view","type":"function"},
+            {"inputs":[],"name":"getPaintedCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],"name":"getPixelColor","outputs":[{"internalType":"uint8","name":"r","type":"uint8"},{"internalType":"uint8","name":"g","type":"uint8"},{"internalType":"uint8","name":"b","type":"uint8"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getRemainingPaintCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"paintCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"},{"internalType":"uint8","name":"colorIndex","type":"uint8"}],"name":"paintPixel","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"components":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"},{"internalType":"uint8","name":"colorIndex","type":"uint8"}],"internalType":"struct ShibPixel.PaintInput[]","name":"inputs","type":"tuple[]"}],"name":"paintBatch","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[],"name":"paintedCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+        ];
+        const shibarium = { chainId: 109, chainName: 'Shibarium', nativeCurrency: { name: 'BONE', symbol: 'BONE', decimals: 18 }, rpcUrls: ['https://rpc.shibrpc.com'], blockExplorerUrls: ['https://shibariumscan.io'] };
+        
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let selectedX = 0, selectedY = 0;
+
+        async function connectWallet() {
+            const status = document.getElementById('networkStatus');
+            const connectButton = document.getElementById('connectButton');
+            try {
+                if (!window.ethereum) throw new Error("No wallet detected. Install MetaMask.");
+                if (!window.location.protocol.startsWith('http')) throw new Error("Run via local server (e.g., 'npx serve').");
+                connectButton.classList.add('loading');
+                status.innerText = "Connecting...";
+                web3 = new Web3(window.ethereum);
+                accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (!accounts.length) throw new Error("Unlock or connect wallet in MetaMask.");
+                const chainId = await web3.eth.getChainId();
+                if (chainId !== 109) {
+                    try {
+                        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: "0x6d" }] });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [shibarium] });
+                        else throw switchError;
+                    }
+                }
+                connectButton.textContent = `Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                status.innerText = "Connected to Shibarium";
+                document.getElementById('connectSection').style.display = 'none';
+                document.getElementById('paintButton').disabled = false;
+                contract = new web3.eth.Contract(SHIBPIXEL_ABI, SHIBPIXEL_ADDRESS);
+                await initCanvas();
+                await populateColors();
+            } catch (error) {
+                status.innerText = "Failed: " + error.message;
+            } finally {
+                connectButton.classList.remove('loading');
+            }
+        }
+
+        async function initCanvas() {
+            const section = await contract.methods.getCanvasSection(0, 0, 100, 100).call();
+            for (let y = 0; y < 100; y++) {
+                for (let x = 0; x < 100; x++) {
+                    const colorIndex = section[y][x];
+                    const color = await contract.methods.availableColors(colorIndex).call();
+                    ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                selectedX = Math.floor((e.clientX - rect.left) * scaleX);
+                selectedY = Math.floor((e.clientY - rect.top) * scaleY);
+                document.getElementById('coords').innerText = `X: ${selectedX}, Y: ${selectedY}`;
+            });
+            canvas.addEventListener('click', () => {
+                document.getElementById('coords').innerText = `X: ${selectedX}, Y: ${selectedY}`;
+            });
+        }
+
+        async function populateColors() {
+            const select = document.getElementById('colorSelect');
+            for (let i = 0; i < 40; i++) {
+                const color = await contract.methods.availableColors(i).call();
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = `Color ${i} (RGB: ${color.r}, ${color.g}, ${color.b})`;
+                option.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                option.style.color = (color.r * 0.299 + color.g * 0.587 + color.b * 0.114) > 128 ? '#000' : '#fff';
+                select.appendChild(option);
+            }
+        }
+
+        async function paintPixel() {
+            const colorIndex = document.getElementById('colorSelect').value;
+            const paintButton = document.getElementById('paintButton');
+            try {
+                paintButton.disabled = true;
+                await contract.methods.paintPixel(selectedX, selectedY, colorIndex).send({ from: accounts[0] });
+                const color = await contract.methods.availableColors(colorIndex).call();
+                ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                ctx.fillRect(selectedX, selectedY, 1, 1);
+            } catch (error) {
+                alert("Failed to paint: " + error.message);
+            } finally {
+                paintButton.disabled = false;
+            }
+        }
+
+        window.ethereum?.on('chainChanged', (chainId) => {
+            if (parseInt(chainId, 16) !== 109) {
+                document.getElementById('networkStatus').innerText = "Switched to wrong network. Please reconnect.";
+                document.getElementById('connectButton').textContent = 'Connect MetaMask';
+                document.getElementById('connectSection').style.display = 'block';
+                web3 = null;
+                accounts = null;
+                document.getElementById('paintButton').disabled = true;
+            } else {
+                connectWallet();
+            }
+        });
+
+        window.ethereum?.on('accountsChanged', (newAccounts) => {
+            if (newAccounts.length) {
+                connectWallet();
+            } else {
+                document.getElementById('networkStatus').innerText = "Wallet disconnected. Please reconnect.";
+                document.getElementById('connectButton').textContent = 'Connect MetaMask';
+                document.getElementById('connectSection').style.display = 'block';
+                web3 = null;
+                accounts = null;
+                document.getElementById('paintButton').disabled = true;
+            }
+        });
+
+        window.addEventListener('load', () => {
+            if (!window.location.protocol.startsWith('http')) {
+                document.getElementById('networkStatus').innerHTML = 'Please run via a local server (e.g., "npx serve").';
+            } else if (!window.ethereum) {
+                document.getElementById('networkStatus').innerHTML = 'No wallet detected. Install <a href="https://metamask.io" target="_blank">MetaMask</a>.';
+            }
+        });
+
+        document.getElementById('connectButton').addEventListener('click', connectWallet);
+        document.getElementById('paintButton').addEventListener('click', paintPixel);
+    </script>
+</body>
+</html>
