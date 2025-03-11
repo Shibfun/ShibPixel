@@ -4,39 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShibPixel - Shibarium</title>
-    <link rel="icon" type="image/png" href="images/shibarium.png"> <!-- Favicon -->
+    <!-- Favicon with multiple sizes for better compatibility -->
+    <link rel="icon" type="image/png" href="/images/shibarium.png" sizes="16x16">
+    <link rel="icon" type="image/png" href="/images/shibarium.png" sizes="32x32">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/shibarium.png">
+    <link rel="shortcut icon" href="/images/shibarium.png">
     <style>
         body { font-family: 'Arial', sans-serif; background: #f5f5f5; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
-        .container { background: #fff; padding: 15px; width: 90%; max-width: 1000px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
+        .container { background: #fff; padding: 15px; width: 90%; max-width: 1200px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
-        .network { display: flex; align-items: center; font-size: 1em; font-weight: bold; color: #333; }
-        .network img { width: 20px; height: 20px; margin-right: 5px; }
+        .network { display: flex; align-items: center; font-size: 1.2em; font-weight: bold; color: #333; }
+        .network img { width: 24px; height: 24px; margin-right: 8px; }
         .connect-section { margin: 15px 0; }
-        .connect-btn { background: #007bff; color: #fff; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 1em; width: 100%; box-sizing: border-box; }
+        .connect-btn { background: #007bff; color: #fff; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 1.1em; width: 100%; box-sizing: border-box; transition: background 0.3s; }
         .connect-btn:hover { background: #0056b3; }
         .connect-btn.loading { opacity: 0.7; pointer-events: none; }
-        .status { margin-top: 10px; font-size: 0.9em; color: #666; }
-        .canvas-section { margin: 20px 0; }
-        #canvas { display: block; margin: 0 auto; border: 1px solid #ccc; image-rendering: pixelated; width: 1000px; height: 1000px; }
-        .controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
-        .color-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 10px; }
-        .color-block { width: 40px; height: 40px; border: 1px solid #ccc; cursor: pointer; }
+        .status { margin-top: 10px; font-size: 0.95em; color: #666; }
+        .canvas-section { margin: 20px 0; position: relative; }
+        #canvas { display: block; margin: 0 auto; border: 2px solid #ccc; image-rendering: pixelated; width: 1000px; height: 1000px; }
+        #loading-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 20px; border: 2px solid #28a745; border-radius: 10px; overflow: hidden; display: none; }
+        #loading-progress { height: 100%; background: #28a745; width: 0; transition: width 0.3s; }
+        .controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; }
+        .color-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 15px; max-width: 100%; }
+        .color-block { width: 50px; height: 50px; border: 2px solid #ccc; cursor: pointer; transition: border 0.3s; }
         .color-block:hover { border-color: #000; }
-        .color-block.selected { border: 2px solid #000; }
-        .paint-btn { padding: 8px 15px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        .color-block.selected { border: 3px solid #000; }
+        .paint-btn { padding: 10px 20px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; transition: background 0.3s; }
         .paint-btn:hover { background: #218838; }
-        .paint-btn:disabled { background: #ccc; cursor: not-allowed; }
-        .coords { font-size: 0.9em; color: #666; }
-        .quote-section { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 8px; font-style: italic; color: #666; }
+        .paint-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        .coords { font-size: 1em; color: #666; font-weight: bold; }
+        .hint { font-size: 0.9em; color: #666; margin-top: 5px; }
+        .quote-section { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 10px; font-style: italic; color: #666; font-size: 1em; }
         @media (max-width: 600px) {
             .container { width: 100%; margin: 0; padding: 10px; border-radius: 0; box-shadow: none; }
             .connect-btn { padding: 10px; font-size: 0.9em; }
             .status { font-size: 0.8em; }
             #canvas { width: 100%; height: auto; min-height: 300px; }
-            .color-block { width: 30px; height: 30px; }
-            .paint-btn { padding: 6px 12px; }
+            .color-block { width: 40px; height: 40px; }
+            .paint-btn { padding: 8px 15px; font-size: 0.9em; }
             .coords { font-size: 0.8em; }
-            .quote-section { font-size: 0.8em; }
+            .hint { font-size: 0.75em; }
+            .quote-section { font-size: 0.85em; padding: 10px; }
         }
     </style>
 </head>
@@ -50,15 +58,19 @@
         </div>
         <div class="connect-section" id="connectSection">
             <button class="connect-btn" id="connectButton">Connect MetaMask</button>
-            <div id="networkStatus" class="status">Click to connect...</div>
+            <div id="networkStatus" class="status">Click to connect and unleash your inner Shiba artist! 🐶</div>
         </div>
         <div class="canvas-section">
             <canvas id="canvas" width="1000" height="1000"></canvas>
+            <div id="loading-bar">
+                <div id="loading-progress"></div>
+            </div>
             <div class="controls">
                 <button class="paint-btn" id="paintButton" disabled>Paint</button>
                 <div class="coords" id="coords">X: 0, Y: 0</div>
             </div>
             <div class="color-grid" id="colorGrid"></div>
+            <div class="hint">Click the canvas to select a spot, pick a color, then hit "Paint" to create! 🎨</div>
         </div>
         <div class="quote-section" id="quoteSection">
             Woof! Ready to paint some pixel art with me? 🐶
@@ -86,9 +98,11 @@
             {"inputs":[],"name":"paintedCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
         ];
         const shibarium = { chainId: 109, chainName: 'Shibarium', nativeCurrency: { name: 'BONE', symbol: 'BONE', decimals: 18 }, rpcUrls: ['https://rpc.shibrpc.com'], blockExplorerUrls: ['https://shibariumscan.io'] };
-        
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingProgress = document.getElementById('loading-progress');
         let selectedX = 0, selectedY = 0, selectedColor = 0, pixelSize = 10;
         const quoteSection = document.getElementById('quoteSection');
         const colorGrid = document.getElementById('colorGrid');
@@ -102,6 +116,10 @@
                 `Ruff! ${message} - Shiba says: Good job, human! 😄`
             ];
             quoteSection.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+        }
+
+        function updateLoadingProgress(progress) {
+            loadingProgress.style.width = `${progress}%`;
         }
 
         async function connectWallet() {
@@ -126,7 +144,7 @@
                     }
                 }
                 connectButton.textContent = `Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
-                status.innerText = "Connected to Shibarium";
+                status.innerText = "Connected to Shibarium - Unleash your Shiba art! 🐶";
                 updateQuote("Wallet connected! Let’s paint the town red... or any color! 🎉");
                 document.getElementById('connectSection').style.display = 'none';
                 document.getElementById('paintButton').disabled = false;
@@ -142,7 +160,10 @@
         }
 
         async function initCanvas() {
+            loadingBar.style.display = 'block';
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const totalSections = 100; // 10x10 sections
+            let loadedSections = 0;
             for (let y = 0; y < 100; y += 10) {
                 for (let x = 0; x < 100; x += 10) {
                     try {
@@ -155,11 +176,15 @@
                                 ctx.fillRect((x + j) * pixelSize, (y + i) * pixelSize, pixelSize, pixelSize);
                             }
                         }
+                        loadedSections++;
+                        updateLoadingProgress((loadedSections / totalSections) * 100);
                     } catch (error) {
                         console.error(`Error loading section (${x}, ${y}):`, error);
                     }
                 }
             }
+            loadingBar.style.display = 'none';
+            updateLoadingProgress(0);
             canvas.addEventListener('click', (e) => {
                 const rect = canvas.getBoundingClientRect();
                 selectedX = Math.floor((e.clientX - rect.left) / pixelSize);
@@ -169,6 +194,7 @@
                     selectedX = 0;
                     selectedY = 0;
                     document.getElementById('coords').innerText = `X: 0, Y: 0`;
+                    updateQuote("Ruff! Coordinates out of bounds - Shiba’s lost his paw! 😆");
                 }
             });
         }
@@ -185,12 +211,14 @@
                     selectedColor = i;
                     document.querySelectorAll('.color-block').forEach(b => b.classList.remove('selected'));
                     block.classList.add('selected');
+                    updateQuote(`Woof! Picked color ${i} - Ready to paint, human? 🎨`);
                 });
                 colorGrid.appendChild(block);
             }
             if (colorGrid.children.length > 0) {
                 colorGrid.children[0].classList.add('selected');
                 selectedColor = 0;
+                updateQuote("Arf! Default color selected - Let’s get started! 🐾");
             }
         }
 
