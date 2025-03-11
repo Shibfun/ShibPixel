@@ -91,6 +91,7 @@
         const ctx = canvas.getContext('2d');
         let selectedX = 0, selectedY = 0, selectedColor = 0, pixelSize = 10;
         const quoteSection = document.getElementById('quoteSection');
+        const colorGrid = document.getElementById('colorGrid');
 
         function updateQuote(message) {
             const quotes = [
@@ -173,7 +174,7 @@
         }
 
         async function populateColors() {
-            const colorGrid = document.getElementById('colorGrid');
+            colorGrid.innerHTML = ''; // Clear existing blocks
             for (let i = 0; i < 40; i++) {
                 const color = await contract.methods.availableColors(i).call();
                 const block = document.createElement('div');
@@ -187,12 +188,18 @@
                 });
                 colorGrid.appendChild(block);
             }
-            colorGrid.children[0].classList.add('selected');
-            selectedColor = 0;
+            if (colorGrid.children.length > 0) {
+                colorGrid.children[0].classList.add('selected');
+                selectedColor = 0;
+            }
         }
 
         async function paintPixel() {
             const paintButton = document.getElementById('paintButton');
+            if (selectedX >= 100 || selectedY >= 100) {
+                updateQuote("Ruff! Coordinates out of bounds - Shiba’s lost his paw! 😆");
+                return;
+            }
             try {
                 paintButton.disabled = true;
                 updateQuote("Painting with my paw... confirm the transaction, human! 🐶");
@@ -202,7 +209,11 @@
                 ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
                 ctx.fillRect(selectedX * pixelSize, selectedY * pixelSize, pixelSize, pixelSize);
             } catch (error) {
-                updateQuote(`Arf! Painting failed: ${error.message} - Did you cancel, you sneaky human? 😢`);
+                if (error.code === 4001) {
+                    updateQuote("Ruff! You canceled that paint job, you cheeky human! 😆");
+                } else {
+                    updateQuote(`Arf! Painting failed: ${error.message} - Shiba needs a bone! 😢`);
+                }
                 alert("Failed to paint: " + error.message);
             } finally {
                 paintButton.disabled = false;
@@ -240,8 +251,10 @@
         window.addEventListener('load', () => {
             if (!window.location.protocol.startsWith('http')) {
                 document.getElementById('networkStatus').innerHTML = 'Please run via a local server (e.g., "npx serve").';
+                updateQuote("Woof! Need a server to play, human! 🐶");
             } else if (!window.ethereum) {
                 document.getElementById('networkStatus').innerHTML = 'No wallet detected. Install <a href="https://metamask.io" target="_blank">MetaMask</a>.';
+                updateQuote("Arf! No MetaMask? Shiba can’t paint without it! 😿");
             }
         });
 
