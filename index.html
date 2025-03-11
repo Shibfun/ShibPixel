@@ -17,7 +17,7 @@
         .connect-btn.loading { opacity: 0.7; pointer-events: none; }
         .status { margin-top: 10px; font-size: 0.9em; color: #666; }
         .canvas-section { margin: 20px 0; }
-        #canvas { display: block; margin: 0 auto; border: 1px solid #ccc; image-rendering: pixelated; width: 100%; max-width: 500px; height: auto; }
+        #canvas { display: block; margin: 0 auto; border: 1px solid #ccc; image-rendering: pixelated; width: 500px; height: 500px; }
         .controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
         .color-select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 150px; }
         .paint-btn { padding: 8px 15px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
@@ -28,7 +28,7 @@
             .container { width: 100%; margin: 0; padding: 10px; border-radius: 0; box-shadow: none; }
             .connect-btn { padding: 10px; font-size: 0.9em; }
             .status { font-size: 0.8em; }
-            #canvas { max-width: 100%; }
+            #canvas { width: 100%; height: auto; }
             .color-select { width: 120px; padding: 6px; }
             .paint-btn { padding: 6px 12px; }
             .coords { font-size: 0.8em; }
@@ -48,7 +48,7 @@
             <div id="networkStatus" class="status">Click to connect...</div>
         </div>
         <div class="canvas-section">
-            <canvas id="canvas" width="100" height="100"></canvas>
+            <canvas id="canvas" width="500" height="500"></canvas>
             <div class="controls">
                 <select class="color-select" id="colorSelect"></select>
                 <button class="paint-btn" id="paintButton" disabled>Paint</button>
@@ -81,7 +81,7 @@
         
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        let selectedX = 0, selectedY = 0;
+        let selectedX = 0, selectedY = 0, pixelSize = 5;
 
         async function connectWallet() {
             const status = document.getElementById('networkStatus');
@@ -118,22 +118,34 @@
         }
 
         async function initCanvas() {
-            const section = await contract.methods.getCanvasSection(0, 0, 100, 100).call();
-            for (let y = 0; y < 100; y++) {
-                for (let x = 0; x < 100; x++) {
-                    const colorIndex = section[y][x];
-                    const color = await contract.methods.availableColors(colorIndex).call();
-                    ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
-                    ctx.fillRect(x, y, 1, 1);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < 100; y += 10) {
+                for (let x = 0; x < 100; x += 10) {
+                    try {
+                        const section = await contract.methods.getCanvasSection(x, y, 10, 10).call();
+                        for (let i = 0; i < 10; i++) {
+                            for (let j = 0; j < 10; j++) {
+                                const colorIndex = section[i][j];
+                                const color = await contract.methods.availableColors(colorIndex).call();
+                                ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                                ctx.fillRect((x + j) * pixelSize, (y + i) * pixelSize, pixelSize, pixelSize);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error loading section (${x}, ${y}):`, error);
+                    }
                 }
             }
             canvas.addEventListener('mousemove', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                selectedX = Math.floor((e.clientX - rect.left) * scaleX);
-                selectedY = Math.floor((e.clientY - rect.top) * scaleY);
+                selectedX = Math.floor((e.clientX - rect.left) / pixelSize);
+                selectedY = Math.floor((e.clientY - rect.top) / pixelSize);
                 document.getElementById('coords').innerText = `X: ${selectedX}, Y: ${selectedY}`;
+                if (selectedX >= 100 || selectedY >= 100) {
+                    document.getElementById('coords').innerText = `X: 0, Y: 0`;
+                    selectedX = 0;
+                    selectedY = 0;
+                }
             });
             canvas.addEventListener('click', () => {
                 document.getElementById('coords').innerText = `X: ${selectedX}, Y: ${selectedY}`;
@@ -161,7 +173,7 @@
                 await contract.methods.paintPixel(selectedX, selectedY, colorIndex).send({ from: accounts[0] });
                 const color = await contract.methods.availableColors(colorIndex).call();
                 ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
-                ctx.fillRect(selectedX, selectedY, 1, 1);
+                ctx.fillRect(selectedX * pixelSize, selectedY * pixelSize, pixelSize, pixelSize);
             } catch (error) {
                 alert("Failed to paint: " + error.message);
             } finally {
