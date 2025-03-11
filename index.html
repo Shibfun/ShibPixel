@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="/images/shibarium.png">
     <style>
         body { font-family: 'Arial', sans-serif; background: #f5f5f5; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
-        .container { background: #fff; padding: 15px; width: 90%; max-width: 1200px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
+        .container { background: #fff; padding: 15px; width: 90%; max-width: 600px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
         .network { display: flex; align-items: center; font-size: 1.2em; font-weight: bold; color: #333; }
         .network img { width: 24px; height: 24px; margin-right: 8px; }
@@ -21,12 +21,12 @@
         .connect-btn.loading { opacity: 0.7; pointer-events: none; }
         .status { margin-top: 10px; font-size: 0.95em; color: #666; }
         .canvas-section { margin: 20px 0; position: relative; }
-        #canvas { display: block; margin: 0 auto; border: 2px solid #ccc; image-rendering: pixelated; width: 1000px; height: 1000px; }
+        #canvas { display: block; margin: 0 auto; border: 2px solid #ccc; image-rendering: pixelated; width: 500px; height: 500px; }
         #loading-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 20px; border: 2px solid #28a745; border-radius: 10px; overflow: hidden; display: none; }
         #loading-progress { height: 100%; background: #28a745; width: 0; transition: width 0.3s; }
         .controls { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; }
         .color-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 15px; max-width: 100%; }
-        .color-block { width: 50px; height: 50px; border: 2px solid #ccc; cursor: pointer; transition: border 0.3s; }
+        .color-block { width: 40px; height: 40px; border: 2px solid #ccc; cursor: pointer; transition: border 0.3s; }
         .color-block:hover { border-color: #000; }
         .color-block.selected { border: 3px solid #000; }
         .paint-btn { padding: 10px 20px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; transition: background 0.3s; }
@@ -40,7 +40,7 @@
             .connect-btn { padding: 10px; font-size: 0.9em; }
             .status { font-size: 0.8em; }
             #canvas { width: 100%; height: auto; min-height: 300px; }
-            .color-block { width: 40px; height: 40px; }
+            .color-block { width: 30px; height: 30px; }
             .paint-btn { padding: 8px 15px; font-size: 0.9em; }
             .coords { font-size: 0.8em; }
             .hint { font-size: 0.75em; }
@@ -61,7 +61,7 @@
             <div id="networkStatus" class="status">Click to connect and unleash your inner Shiba artist! 🐶</div>
         </div>
         <div class="canvas-section">
-            <canvas id="canvas" width="1000" height="1000"></canvas>
+            <canvas id="canvas" width="500" height="500"></canvas>
             <div id="loading-bar">
                 <div id="loading-progress"></div>
             </div>
@@ -103,7 +103,7 @@
         const ctx = canvas.getContext('2d');
         const loadingBar = document.getElementById('loading-bar');
         const loadingProgress = document.getElementById('loading-progress');
-        let selectedX = 0, selectedY = 0, selectedColor = 0, pixelSize = 10;
+        let selectedX = 0, selectedY = 0, selectedColor = 0, pixelSize = 5;
         const quoteSection = document.getElementById('quoteSection');
         const colorGrid = document.getElementById('colorGrid');
 
