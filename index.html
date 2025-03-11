@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShibPixel - Shibarium</title>
-    <link rel="icon" type="image/png" href="images/shibarium.png">
+    <link rel="icon" type="image/png" href="images/shibarium.png"> <!-- Favicon -->
     <style>
         body { font-family: 'Arial', sans-serif; background: #f5f5f5; color: #333; margin: 0; padding: 0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
         .container { background: #fff; padding: 15px; width: 90%; max-width: 1000px; text-align: center; margin: 10px auto; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); border-radius: 15px; }
@@ -27,6 +27,7 @@
         .paint-btn:hover { background: #218838; }
         .paint-btn:disabled { background: #ccc; cursor: not-allowed; }
         .coords { font-size: 0.9em; color: #666; }
+        .quote-section { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 8px; font-style: italic; color: #666; }
         @media (max-width: 600px) {
             .container { width: 100%; margin: 0; padding: 10px; border-radius: 0; box-shadow: none; }
             .connect-btn { padding: 10px; font-size: 0.9em; }
@@ -35,6 +36,7 @@
             .color-block { width: 30px; height: 30px; }
             .paint-btn { padding: 6px 12px; }
             .coords { font-size: 0.8em; }
+            .quote-section { font-size: 0.8em; }
         }
     </style>
 </head>
@@ -57,6 +59,9 @@
                 <div class="coords" id="coords">X: 0, Y: 0</div>
             </div>
             <div class="color-grid" id="colorGrid"></div>
+        </div>
+        <div class="quote-section" id="quoteSection">
+            Woof! Ready to paint some pixel art with me? 🐶
         </div>
     </div>
 
@@ -85,6 +90,18 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         let selectedX = 0, selectedY = 0, selectedColor = 0, pixelSize = 10;
+        const quoteSection = document.getElementById('quoteSection');
+
+        function updateQuote(message) {
+            const quotes = [
+                `Woof! ${message} - This Shiba is ready to paint! 🐶`,
+                `Arf arf! ${message} - Let’s make some pixel magic! 🎨`,
+                `Bow wow! ${message} - Shiba approves this move! 🐾`,
+                `Woof woof! ${message} - Time to dig into some art! 🌟`,
+                `Ruff! ${message} - Shiba says: Good job, human! 😄`
+            ];
+            quoteSection.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+        }
 
         async function connectWallet() {
             const status = document.getElementById('networkStatus');
@@ -94,6 +111,7 @@
                 if (!window.location.protocol.startsWith('http')) throw new Error("Run via local server (e.g., 'npx serve').");
                 connectButton.classList.add('loading');
                 status.innerText = "Connecting...";
+                updateQuote("Connecting to my bone-tastic wallet");
                 web3 = new Web3(window.ethereum);
                 accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (!accounts.length) throw new Error("Unlock or connect wallet in MetaMask.");
@@ -108,6 +126,7 @@
                 }
                 connectButton.textContent = `Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
                 status.innerText = "Connected to Shibarium";
+                updateQuote("Wallet connected! Let’s paint the town red... or any color! 🎉");
                 document.getElementById('connectSection').style.display = 'none';
                 document.getElementById('paintButton').disabled = false;
                 contract = new web3.eth.Contract(SHIBPIXEL_ABI, SHIBPIXEL_ADDRESS);
@@ -115,6 +134,7 @@
                 await populateColors();
             } catch (error) {
                 status.innerText = "Failed: " + error.message;
+                updateQuote(`Oops! ${error.message} - Shiba needs a treat to recover! 😢`);
             } finally {
                 connectButton.classList.remove('loading');
             }
@@ -167,7 +187,6 @@
                 });
                 colorGrid.appendChild(block);
             }
-            // Select the first color by default
             colorGrid.children[0].classList.add('selected');
             selectedColor = 0;
         }
@@ -176,11 +195,14 @@
             const paintButton = document.getElementById('paintButton');
             try {
                 paintButton.disabled = true;
-                await contract.methods.paintPixel(selectedX, selectedY, selectedColor).send({ from: accounts[0] });
+                updateQuote("Painting with my paw... confirm the transaction, human! 🐶");
+                const tx = await contract.methods.paintPixel(selectedX, selectedY, selectedColor).send({ from: accounts[0] });
+                updateQuote("Woof! Painting successful - Shiba’s masterpiece grows! 🎉");
                 const color = await contract.methods.availableColors(selectedColor).call();
                 ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
                 ctx.fillRect(selectedX * pixelSize, selectedY * pixelSize, pixelSize, pixelSize);
             } catch (error) {
+                updateQuote(`Arf! Painting failed: ${error.message} - Did you cancel, you sneaky human? 😢`);
                 alert("Failed to paint: " + error.message);
             } finally {
                 paintButton.disabled = false;
@@ -195,6 +217,7 @@
                 web3 = null;
                 accounts = null;
                 document.getElementById('paintButton').disabled = true;
+                updateQuote("Ruff! Wrong network - Shiba’s lost in the blockchain woods! 🌲");
             } else {
                 connectWallet();
             }
@@ -210,6 +233,7 @@
                 web3 = null;
                 accounts = null;
                 document.getElementById('paintButton').disabled = true;
+                updateQuote("Woof! Wallet disconnected - Shiba’s off to chase some bones! 🐶");
             }
         });
 
